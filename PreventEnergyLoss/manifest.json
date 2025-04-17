@@ -1,0 +1,10 @@
+﻿{
+	"Name": "Prevent Energy Loss",
+	"Author": "Freaksaus",
+	"Version": "1.0.0",
+	"Description": "Prevent yourself from losing energy when incorrectly using a tool",
+	"UniqueID": "freaksaus.preventenergyloss",
+	"EntryDll": "PreventEnergyLoss.dll",
+	"MinimumApiVersion": "4.0.0",
+	"UpdateKeys": [ "Nexus:33313" ]
+}
