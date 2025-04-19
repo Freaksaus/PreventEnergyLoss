@@ -18,8 +18,8 @@ internal sealed class ModEntry : Mod
         Harmony harmony = new(Helper.ModRegistry.ModID);
 
         harmony.Patch(
-               original: AccessTools.Method(typeof(Farmer), nameof(Farmer.BeginUsingTool)),
-               postfix: new HarmonyMethod(typeof(ModEntry), nameof(BeginUsingTool_Postfix))
+               original: AccessTools.Method(typeof(Tool), nameof(Tool.DoFunction)),
+               prefix: new HarmonyMethod(typeof(ModEntry), nameof(DoFunction_Prefix))
            );
 
         harmony.Patch(
@@ -30,7 +30,7 @@ internal sealed class ModEntry : Mod
         _monitor = Monitor;
     }
 
-    public static void BeginUsingTool_Postfix()
+    public static void DoFunction_Prefix(GameLocation location, int x, int y, int power, Farmer who)
     {
         if (Game1.player.CurrentTool.IsEfficient)
         {
