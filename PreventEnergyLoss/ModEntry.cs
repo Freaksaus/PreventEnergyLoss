@@ -47,6 +47,9 @@ internal sealed class ModEntry : Mod
             case StardewValley.Tools.Axe:
                 shouldTakeEnergy = ShouldAxeTakeEnergy(Game1.currentLocation, tileVector);
                 break;
+            case StardewValley.Tools.Pickaxe:
+                shouldTakeEnergy = ShouldPickaxeTakeEnergy(Game1.currentLocation, tileVector);
+                break;
             default:
                 return;
         }
@@ -121,6 +124,61 @@ internal sealed class ModEntry : Mod
             .Any())
         {
             _monitor.Log("Axe energy used because of a log or stump", LogLevel.Debug);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ShouldPickaxeTakeEnergy(
+            GameLocation location,
+            Vector2 tile)
+    {
+        if (location.Objects.TryGetValue(tile, out StardewValley.Object tileObject))
+        {
+            if (tileObject is Furniture)
+            {
+                return false;
+            }
+            else if (tileObject is BreakableContainer)
+            {
+                _monitor.Log("Pickaxe energy used because of a breakable container", LogLevel.Debug);
+                return true;
+            }
+            else if (tileObject.Type == ObjectTypes.Crafting || tileObject.Name == ObjectNames.Stone || tileObject.Name == ObjectNames.Weeds)
+            {
+                _monitor.Log($"Pickaxe energy used because of a {tileObject.Name}", LogLevel.Debug);
+                return true;
+            }
+        }
+
+        if (location.terrainFeatures.TryGetValue(tile, out TerrainFeature terrainFeature))
+        {
+            if (terrainFeature is Flooring)
+            {
+                _monitor.Log("Pickaxe energy used because of flooring", LogLevel.Debug);
+                return true;
+            }
+            else if (terrainFeature is HoeDirt)
+            {
+                _monitor.Log("Pickaxe energy used because of hoed dirt", LogLevel.Debug);
+                return true;
+            }
+        }
+
+        var tileRectangle = new Rectangle((int)tile.X * 64, (int)tile.Y * 64, 64, 64);
+        if (location.resourceClumps
+                .Where(x => x.getBoundingBox().Intersects(tileRectangle))
+                .Where(x => x.parentSheetIndex.Value == ResourceClump.boulderIndex ||
+                            x.parentSheetIndex.Value == ResourceClump.meteoriteIndex ||
+                            x.parentSheetIndex.Value == ResourceClump.mineRock1Index ||
+                            x.parentSheetIndex.Value == ResourceClump.mineRock2Index ||
+                            x.parentSheetIndex.Value == ResourceClump.mineRock3Index ||
+                            x.parentSheetIndex.Value == ResourceClump.mineRock4Index ||
+                            x.parentSheetIndex.Value == ResourceClump.quarryBoulderIndex)
+                .Any())
+        {
+            _monitor.Log("Pickaxe energy used because of a boulder or meteorite", LogLevel.Debug);
             return true;
         }
 
