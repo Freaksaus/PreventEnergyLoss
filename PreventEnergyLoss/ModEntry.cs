@@ -1,7 +1,9 @@
 ﻿using HarmonyLib;
+using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley;
-using StardewValley.Tools;
+using StardewValley.Objects;
+using StardewValley.TerrainFeatures;
 
 namespace PreventEnergyLoss;
 
@@ -9,6 +11,7 @@ namespace PreventEnergyLoss;
 internal sealed class ModEntry : Mod
 {
     private static bool _toolEfficientChanged = false;
+    private static IMonitor _monitor;
 
     public override void Entry(IModHelper helper)
     {
@@ -23,6 +26,8 @@ internal sealed class ModEntry : Mod
                original: AccessTools.Method(typeof(Farmer), nameof(Farmer.EndUsingTool)),
                postfix: new HarmonyMethod(typeof(ModEntry), nameof(EndUsingTool_Postfix))
            );
+
+        _monitor = Monitor;
     }
 
     public static void BeginUsingTool_Postfix()
@@ -33,24 +38,27 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        if (Game1.player.CurrentTool is not Axe)
+        var tileVector = Game1.player.GetToolLocation(false) / 64;
+        tileVector = new Vector2((int)tileVector.X, (int)tileVector.Y);
+
+        var shouldTakeEnergy = true;
+        switch (Game1.player.CurrentTool)
+        {
+            case StardewValley.Tools.Axe:
+                shouldTakeEnergy = ShouldAxeTakeEnergy(Game1.currentLocation, tileVector);
+                break;
+            default:
+                return;
+        }
+
+        if (shouldTakeEnergy)
         {
             return;
         }
 
-        var tile = Game1.player.GetToolLocation(false) / 64;
-        var tileObject = Game1.currentLocation.getObjectAtTile((int)tile.X, (int)tile.Y);
-        if (tileObject is null)
-        {
-            return;
-        }
-
-        if (tileObject.Name.Equals("Stone"))
-        {
-            Game1.showGlobalMessage(Game1.player.stamina.ToString());
-            Game1.player.CurrentTool.IsEfficient = true;
-            _toolEfficientChanged = true;
-        }
+        _monitor.Log("Energy usage preserved", LogLevel.Debug);
+        Game1.player.CurrentTool.IsEfficient = true;
+        _toolEfficientChanged = true;
     }
 
     public static void EndUsingTool_Postfix()
@@ -61,5 +69,61 @@ internal sealed class ModEntry : Mod
         }
 
         Game1.player.CurrentTool.IsEfficient = false;
+        _toolEfficientChanged = false;
+    }
+
+    private static bool ShouldAxeTakeEnergy(
+        GameLocation location,
+        Vector2 tile)
+    {
+        if (location.Objects.TryGetValue(tile, out StardewValley.Object tileObject))
+        {
+            if (tileObject is Furniture)
+            {
+                return false;
+            }
+            else if (tileObject is BreakableContainer)
+            {
+                _monitor.Log("Axe energy used because of a breakable container", LogLevel.Debug);
+                return true;
+            }
+            else if (tileObject.Type == ObjectTypes.Crafting || tileObject.Name == ObjectNames.Twig || tileObject.Name == ObjectNames.Weeds)
+            {
+                _monitor.Log($"Axe energy used because of a {tileObject.Name}", LogLevel.Debug);
+                return true;
+            }
+        }
+
+        if (location.terrainFeatures.TryGetValue(tile, out TerrainFeature terrainFeature))
+        {
+            if (terrainFeature is Tree)
+            {
+                _monitor.Log("Axe energy used because of a tree", LogLevel.Debug);
+                return true;
+            }
+            else if (terrainFeature is Flooring)
+            {
+                _monitor.Log("Axe energy used because of flooring", LogLevel.Debug);
+                return true;
+            }
+            else if (terrainFeature is HoeDirt && location.isCropAtTile((int)tile.X, (int)tile.Y))
+            {
+                _monitor.Log("Axe energy used because of a crop", LogLevel.Debug);
+                return true;
+            }
+        }
+
+        var tileRectangle = new Rectangle((int)tile.X * 64, (int)tile.Y * 64, 64, 64);
+        if (location.resourceClumps
+            .Where(x => x.getBoundingBox().Intersects(tileRectangle))
+            .Where(x => x.parentSheetIndex.Value == ResourceClump.stumpIndex ||
+                        x.parentSheetIndex.Value == ResourceClump.hollowLogIndex)
+            .Any())
+        {
+            _monitor.Log("Axe energy used because of a log or stump", LogLevel.Debug);
+            return true;
+        }
+
+        return false;
     }
 }
