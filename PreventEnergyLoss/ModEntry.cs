@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley;
+using StardewValley.Buildings;
+using StardewValley.Locations;
 using StardewValley.Objects;
 using StardewValley.TerrainFeatures;
 
@@ -12,6 +14,13 @@ internal sealed class ModEntry : Mod
 {
     private static bool _toolEfficientChanged = false;
     private static IMonitor _monitor;
+    private static readonly List<Vector2> _waterspotTiles = new()
+    {
+        new Vector2(16f, 6f),
+        new Vector2(16f, 7f),
+        new Vector2(16f, 8f),
+        new Vector2(16f, 9f)
+    };
 
     public override void Entry(IModHelper helper)
     {
@@ -52,6 +61,9 @@ internal sealed class ModEntry : Mod
                 break;
             case StardewValley.Tools.Hoe:
                 shouldTakeEnergy = ShouldHoeTakeEnergy(Game1.player, Game1.currentLocation, tileVector);
+                break;
+            case StardewValley.Tools.WateringCan:
+                shouldTakeEnergy = ShouldWateringCanTakeEnergy(Game1.player, Game1.currentLocation, tileVector);
                 break;
             default:
                 return;
@@ -214,6 +226,67 @@ internal sealed class ModEntry : Mod
                 !location.IsTileOccupiedBy(new Vector2(affectedTile.X, affectedTile.Y)))
             {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ShouldWateringCanTakeEnergy(
+            Farmer who,
+            GameLocation location,
+            Vector2 tile)
+    {
+        var affectedTiles = ToolMethods.GetTilesAffected(tile, Game1.player.toolPower.Value, who);
+        foreach (var affectedTile in affectedTiles)
+        {
+            if (location.terrainFeatures.TryGetValue(tile, out TerrainFeature terrainFeature))
+            {
+                if (terrainFeature is HoeDirt && (terrainFeature as HoeDirt)?.state.Value == 0)
+                {
+                    _monitor.Log("Watering can energy used because of unwatered hoed dirt", LogLevel.Debug);
+                    return true;
+                }
+            }
+
+            var tileRectangle = new Rectangle((int)tile.X * 64, (int)tile.Y * 64, 64, 64);
+            if (location.buildings
+                .OfType<PetBowl>()
+                .Where(x => !x.watered.Value)
+                .Where(x => x.GetBoundingBox().Intersects(tileRectangle))
+                .Any())
+            {
+                _monitor.Log("Watering can energy used because of pet bowl", LogLevel.Debug);
+                return true;
+            }
+
+            if (location is SlimeHutch)
+            {
+                var currentLocation = location as SlimeHutch;
+                var waterspotIndex = _waterspotTiles.IndexOf(affectedTile);
+                if (waterspotIndex >= 0 && waterspotIndex < currentLocation!.waterSpots.Count && !currentLocation!.waterSpots[waterspotIndex])
+                {
+                    _monitor.Log("Watering can energy used because of slime hutch watering spot", LogLevel.Debug);
+                    return true;
+                }
+            }
+            else if (location is VolcanoDungeon)
+            {
+                var currentLocation = location as VolcanoDungeon;
+                if (currentLocation!.waterTiles[(int)affectedTile.X, (int)affectedTile.Y] && !currentLocation.cooledLavaTiles.ContainsKey(affectedTile))
+                {
+                    _monitor.Log("Watering can energy used because of Volcano dungeon lava", LogLevel.Debug);
+                    return true;
+                }
+
+                if (location.Objects.TryGetValue(affectedTile, out StardewValley.Object tileObject))
+                {
+                    if (tileObject is IndoorPot && (tileObject as IndoorPot)!.hoeDirt.Value.state.Value == 0)
+                    {
+                        _monitor.Log("Watering can energy used because of unwatered garden plant", LogLevel.Debug);
+                        return true;
+                    }
+                }
             }
         }
 
