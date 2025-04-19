@@ -50,6 +50,9 @@ internal sealed class ModEntry : Mod
             case StardewValley.Tools.Pickaxe:
                 shouldTakeEnergy = ShouldPickaxeTakeEnergy(Game1.currentLocation, tileVector);
                 break;
+            case StardewValley.Tools.Hoe:
+                shouldTakeEnergy = ShouldHoeTakeEnergy(Game1.player, Game1.currentLocation, tileVector);
+                break;
             default:
                 return;
         }
@@ -180,6 +183,38 @@ internal sealed class ModEntry : Mod
         {
             _monitor.Log("Pickaxe energy used because of a boulder or meteorite", LogLevel.Debug);
             return true;
+        }
+
+        return false;
+    }
+
+    private static bool ShouldHoeTakeEnergy(
+        Farmer who,
+        GameLocation location,
+        Vector2 tile)
+    {
+        var affectedTiles = ToolMethods.GetTilesAffected(tile, Game1.player.toolPower.Value, who);
+        foreach (var affectedTile in affectedTiles)
+        {
+            if (location.Objects.TryGetValue(affectedTile, out StardewValley.Object tileObject))
+            {
+                if (tileObject is BreakableContainer)
+                {
+                    _monitor.Log("Hoe energy used because of a breakable container", LogLevel.Debug);
+                    return true;
+                }
+                else if (tileObject is not Furniture && (tileObject.Type == ObjectTypes.Crafting || tileObject.Name == ObjectNames.ArtifactSpot || tileObject.Name == ObjectNames.Weeds))
+                {
+                    _monitor.Log($"Hoe energy used because of a {tileObject.Name}", LogLevel.Debug);
+                    return true;
+                }
+            }
+
+            if (location.doesTileHaveProperty((int)affectedTile.X, (int)affectedTile.Y, "Diggable", "Back") is not null &&
+                !location.IsTileOccupiedBy(new Vector2(affectedTile.X, affectedTile.Y)))
+            {
+                return true;
+            }
         }
 
         return false;
