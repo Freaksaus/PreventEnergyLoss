@@ -179,6 +179,11 @@ internal sealed class ModEntry : Mod
                 _monitor.Log("Pickaxe energy used because of hoed dirt", LogLevel.Debug);
                 return true;
             }
+            else if (terrainFeature is Tree && (terrainFeature as Tree)!.growthStage.Value == 1)
+            {
+                _monitor.Log("Pickaxe energy used because of a tree", LogLevel.Debug);
+                return true;
+            }
         }
 
         var tileRectangle = new Rectangle((int)tile.X * 64, (int)tile.Y * 64, 64, 64);
@@ -226,6 +231,15 @@ internal sealed class ModEntry : Mod
                 !location.IsTileOccupiedBy(new Vector2(affectedTile.X, affectedTile.Y)))
             {
                 return true;
+            }
+
+            if (location.terrainFeatures.TryGetValue(tile, out TerrainFeature terrainFeature))
+            {
+                if (terrainFeature is Tree && (terrainFeature as Tree)!.growthStage.Value == 1)
+                {
+                    _monitor.Log("Hoe energy used because of a tree", LogLevel.Debug);
+                    return true;
+                }
             }
         }
 
