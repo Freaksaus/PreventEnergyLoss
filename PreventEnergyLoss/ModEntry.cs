@@ -32,8 +32,8 @@ internal sealed class ModEntry : Mod
            );
 
         harmony.Patch(
-               original: AccessTools.Method(typeof(Farmer), nameof(Farmer.EndUsingTool)),
-               postfix: new HarmonyMethod(typeof(ModEntry), nameof(EndUsingTool_Postfix))
+               original: AccessTools.Method(typeof(Tool), nameof(Tool.DoFunction)),
+               postfix: new HarmonyMethod(typeof(ModEntry), nameof(DoFunction_Postfix))
            );
 
         _monitor = Monitor;
@@ -43,6 +43,7 @@ internal sealed class ModEntry : Mod
     {
         if (Game1.player.CurrentTool.IsEfficient)
         {
+            _monitor.Log($"{Game1.player.CurrentTool.Name} is already efficient", LogLevel.Debug);
             //Tool already doesn't consume energy
             return;
         }
@@ -79,8 +80,9 @@ internal sealed class ModEntry : Mod
         _toolEfficientChanged = true;
     }
 
-    public static void EndUsingTool_Postfix()
+    public static void DoFunction_Postfix(GameLocation location, int x, int y, int power, Farmer who)
     {
+        _monitor.Log($"EndUsingTool_Postfix for {Game1.player.CurrentTool.Name}", LogLevel.Debug);
         if (!_toolEfficientChanged)
         {
             return;
