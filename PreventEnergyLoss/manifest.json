@@ -1,7 +1,7 @@
 ﻿{
 	"Name": "Prevent Energy Loss",
 	"Author": "Freaksaus",
-	"Version": "1.0.1",
+	"Version": "1.0.2",
 	"Description": "Prevent yourself from losing energy when incorrectly using a tool",
 	"UniqueID": "freaksaus.preventenergyloss",
 	"EntryDll": "PreventEnergyLoss.dll",
