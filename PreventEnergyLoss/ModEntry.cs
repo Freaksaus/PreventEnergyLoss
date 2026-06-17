@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
+using System.Diagnostics;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Buildings;
@@ -56,7 +57,7 @@ internal sealed class ModEntry : Mod
 
         if (who.CurrentTool.IsEfficient)
         {
-            _monitor.Log($"{who.CurrentTool.Name} is already efficient", LogLevel.Debug);
+            DebugLog($"{who.CurrentTool.Name} is already efficient");
             //Tool already doesn't consume energy
             return;
         }
@@ -88,7 +89,7 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        _monitor.Log("Energy usage preserved", LogLevel.Debug);
+        DebugLog("Energy usage preserved");
         who.CurrentTool.IsEfficient = true;
         _toolMarkedEfficient = who.CurrentTool;
     }
@@ -103,7 +104,13 @@ internal sealed class ModEntry : Mod
         _toolMarkedEfficient.IsEfficient = false;
 
         _toolMarkedEfficient = null;
-        _monitor.Log("EndUsingTool_Postfix reset tool efficiency", LogLevel.Debug);
+        DebugLog("EndUsingTool_Postfix reset tool efficiency");
+    }
+
+    [Conditional("DEBUG")]
+    private static void DebugLog(string message)
+    {
+        _monitor.Log(message, LogLevel.Debug);
     }
 
     private static bool ShouldAxeTakeEnergy(
@@ -118,12 +125,12 @@ internal sealed class ModEntry : Mod
             }
             else if (tileObject is BreakableContainer)
             {
-                _monitor.Log("Axe energy used because of a breakable container", LogLevel.Debug);
+                DebugLog("Axe energy used because of a breakable container");
                 return true;
             }
             else if (tileObject.Type == ObjectTypes.Crafting || tileObject.Name == ObjectNames.Twig || tileObject.Name == ObjectNames.Weeds)
             {
-                _monitor.Log($"Axe energy used because of a {tileObject.Name}", LogLevel.Debug);
+                DebugLog($"Axe energy used because of a {tileObject.Name}");
                 return true;
             }
         }
@@ -132,17 +139,17 @@ internal sealed class ModEntry : Mod
         {
             if (terrainFeature is Tree)
             {
-                _monitor.Log("Axe energy used because of a tree", LogLevel.Debug);
+                DebugLog("Axe energy used because of a tree");
                 return true;
             }
             else if (terrainFeature is Flooring)
             {
-                _monitor.Log("Axe energy used because of flooring", LogLevel.Debug);
+                DebugLog("Axe energy used because of flooring");
                 return true;
             }
             else if (terrainFeature is HoeDirt && location.isCropAtTile((int)tile.X, (int)tile.Y))
             {
-                _monitor.Log("Axe energy used because of a crop", LogLevel.Debug);
+                DebugLog("Axe energy used because of a crop");
                 return true;
             }
         }
@@ -154,7 +161,7 @@ internal sealed class ModEntry : Mod
                         x.parentSheetIndex.Value == ResourceClump.hollowLogIndex)
             .Any())
         {
-            _monitor.Log("Axe energy used because of a log or stump", LogLevel.Debug);
+            DebugLog("Axe energy used because of a log or stump");
             return true;
         }
 
@@ -173,12 +180,12 @@ internal sealed class ModEntry : Mod
             }
             else if (tileObject is BreakableContainer)
             {
-                _monitor.Log("Pickaxe energy used because of a breakable container", LogLevel.Debug);
+                DebugLog("Pickaxe energy used because of a breakable container");
                 return true;
             }
             else if (tileObject.Type == ObjectTypes.Crafting || tileObject.Name == ObjectNames.Stone || tileObject.Name == ObjectNames.Weeds)
             {
-                _monitor.Log($"Pickaxe energy used because of a {tileObject.Name}", LogLevel.Debug);
+                DebugLog($"Pickaxe energy used because of a {tileObject.Name}");
                 return true;
             }
         }
@@ -187,17 +194,17 @@ internal sealed class ModEntry : Mod
         {
             if (terrainFeature is Flooring)
             {
-                _monitor.Log("Pickaxe energy used because of flooring", LogLevel.Debug);
+                DebugLog("Pickaxe energy used because of flooring");
                 return true;
             }
             else if (terrainFeature is HoeDirt)
             {
-                _monitor.Log("Pickaxe energy used because of hoed dirt", LogLevel.Debug);
+                DebugLog("Pickaxe energy used because of hoed dirt");
                 return true;
             }
             else if (terrainFeature is Tree && (terrainFeature as Tree)!.growthStage.Value == 1)
             {
-                _monitor.Log("Pickaxe energy used because of a tree", LogLevel.Debug);
+                DebugLog("Pickaxe energy used because of a tree");
                 return true;
             }
         }
@@ -214,7 +221,7 @@ internal sealed class ModEntry : Mod
                             x.parentSheetIndex.Value == ResourceClump.quarryBoulderIndex)
                 .Any())
         {
-            _monitor.Log("Pickaxe energy used because of a boulder or meteorite", LogLevel.Debug);
+            DebugLog("Pickaxe energy used because of a boulder or meteorite");
             return true;
         }
 
@@ -233,12 +240,12 @@ internal sealed class ModEntry : Mod
             {
                 if (tileObject is BreakableContainer)
                 {
-                    _monitor.Log("Hoe energy used because of a breakable container", LogLevel.Debug);
+                    DebugLog("Hoe energy used because of a breakable container");
                     return true;
                 }
                 else if (tileObject is not Furniture && (tileObject.Type == ObjectTypes.Crafting || tileObject.Name == ObjectNames.ArtifactSpot || tileObject.Name == ObjectNames.Weeds))
                 {
-                    _monitor.Log($"Hoe energy used because of a {tileObject.Name}", LogLevel.Debug);
+                    DebugLog($"Hoe energy used because of a {tileObject.Name}");
                     return true;
                 }
             }
@@ -253,7 +260,7 @@ internal sealed class ModEntry : Mod
             {
                 if (terrainFeature is Tree && (terrainFeature as Tree)!.growthStage.Value == 1)
                 {
-                    _monitor.Log("Hoe energy used because of a tree", LogLevel.Debug);
+                    DebugLog("Hoe energy used because of a tree");
                     return true;
                 }
             }
@@ -274,7 +281,7 @@ internal sealed class ModEntry : Mod
             {
                 if (terrainFeature is HoeDirt && (terrainFeature as HoeDirt)?.state.Value == 0)
                 {
-                    _monitor.Log("Watering can energy used because of unwatered hoed dirt", LogLevel.Debug);
+                    DebugLog("Watering can energy used because of unwatered hoed dirt");
                     return true;
                 }
             }
@@ -286,7 +293,7 @@ internal sealed class ModEntry : Mod
                 .Where(x => x.GetBoundingBox().Intersects(tileRectangle))
                 .Any())
             {
-                _monitor.Log("Watering can energy used because of pet bowl", LogLevel.Debug);
+                DebugLog("Watering can energy used because of pet bowl");
                 return true;
             }
 
@@ -296,7 +303,7 @@ internal sealed class ModEntry : Mod
                 var waterspotIndex = _waterspotTiles.IndexOf(affectedTile);
                 if (waterspotIndex >= 0 && waterspotIndex < currentLocation!.waterSpots.Count && !currentLocation!.waterSpots[waterspotIndex])
                 {
-                    _monitor.Log("Watering can energy used because of slime hutch watering spot", LogLevel.Debug);
+                    DebugLog("Watering can energy used because of slime hutch watering spot");
                     return true;
                 }
             }
@@ -307,7 +314,7 @@ internal sealed class ModEntry : Mod
                     currentLocation.waterTiles[(int)affectedTile.X, (int)affectedTile.Y] &&
                     !currentLocation.cooledLavaTiles.ContainsKey(affectedTile))
                 {
-                    _monitor.Log("Watering can energy used because of Volcano dungeon lava", LogLevel.Debug);
+                    DebugLog("Watering can energy used because of Volcano dungeon lava");
                     return true;
                 }
 
@@ -315,7 +322,7 @@ internal sealed class ModEntry : Mod
                 {
                     if (tileObject is IndoorPot && (tileObject as IndoorPot)!.hoeDirt.Value.state.Value == 0)
                     {
-                        _monitor.Log("Watering can energy used because of unwatered garden plant", LogLevel.Debug);
+                        DebugLog("Watering can energy used because of unwatered garden plant");
                         return true;
                     }
                 }
