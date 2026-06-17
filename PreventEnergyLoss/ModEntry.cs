@@ -32,11 +32,6 @@ internal sealed class ModEntry : Mod
                prefix: new HarmonyMethod(typeof(ModEntry), nameof(DoFunction_Prefix))
            );
 
-        harmony.Patch(
-               original: AccessTools.Method(typeof(Tool), nameof(Tool.DoFunction)),
-               postfix: new HarmonyMethod(typeof(ModEntry), nameof(DoFunction_Postfix))
-           );
-
         var endUsingToolMethod = AccessTools.Method(typeof(Farmer), "endUsingTool")
                                 ?? AccessTools.Method(typeof(Farmer), "EndUsingTool");
         if (endUsingToolMethod is not null)
@@ -96,11 +91,6 @@ internal sealed class ModEntry : Mod
         _monitor.Log("Energy usage preserved", LogLevel.Debug);
         who.CurrentTool.IsEfficient = true;
         _toolMarkedEfficient = who.CurrentTool;
-    }
-
-    public static void DoFunction_Postfix(GameLocation location, int x, int y, int power, Farmer who)
-    {
-        _monitor.Log($"DoFunction_Postfix for {who.CurrentTool?.Name ?? "<no tool>"}", LogLevel.Debug);
     }
 
     public static void EndUsingTool_Postfix(Farmer __instance)
