@@ -12,8 +12,8 @@ namespace PreventEnergyLoss;
 /// <summary>The mod entry point.</summary>
 internal sealed class ModEntry : Mod
 {
-    private static bool _toolEfficientChanged = false;
-    private static IMonitor _monitor;
+    private static Tool? _toolMarkedEfficient;
+    private static IMonitor _monitor = null!;
     private static readonly List<Vector2> _waterspotTiles = new()
     {
         new Vector2(16f, 6f),
@@ -24,6 +24,7 @@ internal sealed class ModEntry : Mod
 
     public override void Entry(IModHelper helper)
     {
+        _monitor = Monitor;
         Harmony harmony = new(Helper.ModRegistry.ModID);
 
         harmony.Patch(
@@ -36,35 +37,52 @@ internal sealed class ModEntry : Mod
                postfix: new HarmonyMethod(typeof(ModEntry), nameof(DoFunction_Postfix))
            );
 
-        _monitor = Monitor;
+        var endUsingToolMethod = AccessTools.Method(typeof(Farmer), "endUsingTool")
+                                ?? AccessTools.Method(typeof(Farmer), "EndUsingTool");
+        if (endUsingToolMethod is not null)
+        {
+            harmony.Patch(
+                   original: endUsingToolMethod,
+                   postfix: new HarmonyMethod(typeof(ModEntry), nameof(EndUsingTool_Postfix))
+               );
+        }
+        else
+        {
+            _monitor.Log("Could not patch Farmer endUsingTool/EndUsingTool; efficiency cleanup may not run.", LogLevel.Warn);
+        }
     }
 
     public static void DoFunction_Prefix(GameLocation location, int x, int y, int power, Farmer who)
     {
-        if (Game1.player.CurrentTool.IsEfficient)
+        if (who.CurrentTool is null)
         {
-            _monitor.Log($"{Game1.player.CurrentTool.Name} is already efficient", LogLevel.Debug);
+            return;
+        }
+
+        if (who.CurrentTool.IsEfficient)
+        {
+            _monitor.Log($"{who.CurrentTool.Name} is already efficient", LogLevel.Debug);
             //Tool already doesn't consume energy
             return;
         }
 
-        var tileVector = Game1.player.GetToolLocation(false) / 64;
+        var tileVector = who.GetToolLocation(false) / 64;
         tileVector = new Vector2((int)tileVector.X, (int)tileVector.Y);
 
         var shouldTakeEnergy = true;
-        switch (Game1.player.CurrentTool)
+        switch (who.CurrentTool)
         {
             case StardewValley.Tools.Axe:
-                shouldTakeEnergy = ShouldAxeTakeEnergy(Game1.currentLocation, tileVector);
+                shouldTakeEnergy = ShouldAxeTakeEnergy(location, tileVector);
                 break;
             case StardewValley.Tools.Pickaxe:
-                shouldTakeEnergy = ShouldPickaxeTakeEnergy(Game1.currentLocation, tileVector);
+                shouldTakeEnergy = ShouldPickaxeTakeEnergy(location, tileVector);
                 break;
             case StardewValley.Tools.Hoe:
-                shouldTakeEnergy = ShouldHoeTakeEnergy(Game1.player, Game1.currentLocation, tileVector);
+                shouldTakeEnergy = ShouldHoeTakeEnergy(who, location, tileVector);
                 break;
             case StardewValley.Tools.WateringCan:
-                shouldTakeEnergy = ShouldWateringCanTakeEnergy(Game1.player, Game1.currentLocation, tileVector);
+                shouldTakeEnergy = ShouldWateringCanTakeEnergy(who, location, tileVector);
                 break;
             default:
                 return;
@@ -76,20 +94,26 @@ internal sealed class ModEntry : Mod
         }
 
         _monitor.Log("Energy usage preserved", LogLevel.Debug);
-        Game1.player.CurrentTool.IsEfficient = true;
-        _toolEfficientChanged = true;
+        who.CurrentTool.IsEfficient = true;
+        _toolMarkedEfficient = who.CurrentTool;
     }
 
     public static void DoFunction_Postfix(GameLocation location, int x, int y, int power, Farmer who)
     {
-        _monitor.Log($"EndUsingTool_Postfix for {Game1.player.CurrentTool.Name}", LogLevel.Debug);
-        if (!_toolEfficientChanged)
+        _monitor.Log($"DoFunction_Postfix for {who.CurrentTool?.Name ?? "<no tool>"}", LogLevel.Debug);
+    }
+
+    public static void EndUsingTool_Postfix(Farmer __instance)
+    {
+        if (_toolMarkedEfficient is null)
         {
             return;
         }
 
-        Game1.player.CurrentTool.IsEfficient = false;
-        _toolEfficientChanged = false;
+        _toolMarkedEfficient.IsEfficient = false;
+
+        _toolMarkedEfficient = null;
+        _monitor.Log("EndUsingTool_Postfix reset tool efficiency", LogLevel.Debug);
     }
 
     private static bool ShouldAxeTakeEnergy(
