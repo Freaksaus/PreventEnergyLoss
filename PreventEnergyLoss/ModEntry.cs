@@ -259,7 +259,7 @@ internal sealed class ModEntry : Mod
                 return true;
             }
 
-            if (location.terrainFeatures.TryGetValue(tile, out TerrainFeature terrainFeature))
+            if (location.terrainFeatures.TryGetValue(affectedTile, out TerrainFeature terrainFeature))
             {
                 if (terrainFeature is Tree && (terrainFeature as Tree)!.growthStage.Value == 1)
                 {
@@ -280,7 +280,7 @@ internal sealed class ModEntry : Mod
         var affectedTiles = ToolMethods.GetTilesAffected(tile, Game1.player.toolPower.Value, who);
         foreach (var affectedTile in affectedTiles)
         {
-            if (location.terrainFeatures.TryGetValue(tile, out TerrainFeature terrainFeature))
+            if (location.terrainFeatures.TryGetValue(affectedTile, out TerrainFeature terrainFeature))
             {
                 if (terrainFeature is HoeDirt && (terrainFeature as HoeDirt)?.state.Value == 0)
                 {
@@ -289,7 +289,7 @@ internal sealed class ModEntry : Mod
                 }
             }
 
-            var tileRectangle = new Rectangle((int)tile.X * 64, (int)tile.Y * 64, 64, 64);
+            var tileRectangle = new Rectangle((int)affectedTile.X * 64, (int)affectedTile.Y * 64, 64, 64);
             if (location.buildings
                 .OfType<PetBowl>()
                 .Where(x => !x.watered.Value)
@@ -313,7 +313,9 @@ internal sealed class ModEntry : Mod
             else if (location is VolcanoDungeon)
             {
                 var currentLocation = location as VolcanoDungeon;
-                if (currentLocation!.waterTiles[(int)affectedTile.X, (int)affectedTile.Y] && !currentLocation.cooledLavaTiles.ContainsKey(affectedTile))
+                if (currentLocation!.isTileOnMap(affectedTile) &&
+                    currentLocation.waterTiles[(int)affectedTile.X, (int)affectedTile.Y] &&
+                    !currentLocation.cooledLavaTiles.ContainsKey(affectedTile))
                 {
                     _monitor.Log("Watering can energy used because of Volcano dungeon lava", LogLevel.Debug);
                     return true;
